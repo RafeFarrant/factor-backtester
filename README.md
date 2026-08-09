@@ -1,50 +1,52 @@
 # Factor Backtester & Retirement Drawdown Stress-Tester
 
-A Python engine that backtests classic equity factor strategies — **momentum, value, and low-volatility** — across ~20 years of S&P 500 data, then stress-tests retirement withdrawal plans against every historical return sequence to measure how different allocations hold up for a client drawing down their pot.
+A Python engine that backtests three classic equity factor strategies (momentum, value, and low-volatility) across roughly 20 years of S&P 500 data. It then stress-tests retirement withdrawal plans against every historical return sequence to see how different allocations hold up for someone drawing down their pot.
 
-Momentum delivered a **Sharpe ratio of 1.06 net of costs** over 2015–2026, beating an equal-weighted benchmark on a risk-adjusted basis. The low-volatility factor — the *worst* performer on raw return — beat value once measured risk-adjusted, illustrating why raw return alone is a poor way to compare strategies.
+Over 2015 to 2026, momentum delivered a Sharpe ratio of 1.06 net of costs, beating an equal-weighted benchmark on a risk-adjusted basis. Interestingly, the low-volatility factor looked like the worst performer on raw return but beat value once you measure it risk-adjusted, which is a nice illustration of why raw return on its own is a poor way to compare strategies.
 
 ## Motivation
 
-This project extends equity style analysis and a retiree drawdown model I originally built and presented to the CEO and CIO during a placement at Lloyds Wealth, rebuilding it from scratch as an open-source quantitative tool and adding a retirement drawdown module to explore sequence-of-returns risk.
+This project grew out of a placement at Lloyds Wealth, where I built some equity style analysis and a retiree drawdown model and presented it to the CEO and CIO. I wanted to take that further and build it properly as an open-source quantitative tool, so I rebuilt it from scratch and added a retirement drawdown module to explore sequence-of-returns risk.
 
 ## What it does
 
-- **Backtests three factor strategies** (momentum, value/long-term reversal, low-volatility) on the S&P 500, rebalanced monthly, net of transaction costs
-- **Computes the metrics that matter** — CAGR, annualised volatility, Sharpe ratio, and maximum drawdown — for each strategy against an equal-weighted benchmark
-- **Breaks performance down by market regime** — the 2015–2021 bull market, the 2022 rate shock, and 2023 onward
-- **Stress-tests retirement withdrawal plans** across every historical starting month (rolling-start analysis), quantifying how different allocations survive a 4%-rule drawdown
+- Backtests three factor strategies (momentum, value/long-term reversal, low-volatility) on the S&P 500, rebalanced monthly, net of transaction costs
+- Computes the metrics that actually matter: CAGR, annualised volatility, Sharpe ratio, and maximum drawdown, for each strategy against an equal-weighted benchmark
+- Breaks performance down by market regime (the 2015 to 2021 bull market, the 2022 rate shock, and 2023 onward)
+- Stress-tests retirement withdrawal plans across every historical starting month (rolling-start analysis), measuring how well different allocations survive a 4%-rule drawdown
 
 ## Key results
 
-Net of 0.1%/trade costs, 2015–2026:
+Net of 0.1% per trade costs, 2015 to 2026:
 
 | Strategy | CAGR | Volatility | Sharpe | Max drawdown |
 |---|---|---|---|---|
-| **Momentum** | 20.7% | 17.5% | **1.06** | −19.9% |
-| Value | 15.7% | 20.9% | 0.66 | −35.9% |
-| Quality (low-vol) | 11.1% | 12.6% | 0.72 | −20.2% |
-| Benchmark (equal-weight) | 16.3% | 16.1% | 0.89 | −23.9% |
+| **Momentum** | 20.7% | 17.5% | **1.06** | -19.9% |
+| Value | 15.7% | 20.9% | 0.66 | -35.9% |
+| Quality (low-vol) | 11.1% | 12.6% | 0.72 | -20.2% |
+| Benchmark (equal-weight) | 16.3% | 16.1% | 0.89 | -23.9% |
 
-- **Momentum led on every axis** — highest return, highest Sharpe, and the shallowest drawdown.
-- **Low-vol's edge is risk-adjusted, not raw** — lowest CAGR, but the lowest volatility and a shallower drawdown than value, so its Sharpe beat value's.
-- **No factor wins in every regime** — value was the only factor to stay positive in the 2022 rate shock (+1.6% while the benchmark fell −10.6%); momentum dominated the 2023+ AI-led rally.
+A few things I took from this:
 
-## Design decisions worth noting
+- Momentum led on every axis: highest return, highest Sharpe, and the shallowest drawdown.
+- Low-vol's edge is risk-adjusted rather than raw. It had the lowest CAGR, but also the lowest volatility and a shallower drawdown than value, so its Sharpe still beat value's.
+- No factor wins in every regime. Value was the only one to stay positive in the 2022 rate shock (+1.6% while the benchmark fell -10.6%), and momentum dominated the 2023 onward AI-led rally.
 
-- **Price-based factors, not fundamentals.** yfinance only exposes *current* fundamentals, so ranking stocks historically on today's P/E or ROE would introduce look-ahead bias. The three factors are built entirely from price and are all published, peer-reviewed anomalies (Jegadeesh & Titman 1993; De Bondt & Thaler 1985; Baker, Bradley & Wurgler 2011).
-- **Backward-looking by construction.** Every factor score uses lagged prices, and the backtest scores at month *t* but earns returns from *t* to *t+1* — guarding against look-ahead bias.
-- **Reproducible.** Data is cached and regenerated by code (`download_prices.py`), so the whole project runs from a clean clone; the data files themselves are gitignored.
+## Some design decisions worth explaining
+
+- **Price-based factors, not fundamentals.** yfinance only gives you current fundamentals, so ranking stocks historically on today's P/E or ROE would introduce look-ahead bias. I built all three factors from price instead, and they are all published, peer-reviewed anomalies (Jegadeesh & Titman 1993, De Bondt & Thaler 1985, Baker, Bradley & Wurgler 2011).
+- **Backward-looking by construction.** Every factor score uses lagged prices, and the backtest scores at month t but earns returns from t to t+1, which guards against look-ahead bias.
+- **Reproducible.** The data is cached and regenerated by code (`download_prices.py`), so the whole thing runs from a clean clone. The data files themselves are gitignored rather than committed.
 
 ## Known limitations
 
-Stated openly, because they shape how the results should be read:
+I have listed these openly because they shape how the results should be read:
 
-- **Survivorship bias** — the universe is the *current* S&P 500, so it excludes firms that were dropped or went bust. Results read slightly rosier than reality.
-- **Sample length** — the backtest starts in 2015 (the value factor needs a 5-year warm-up), so it doesn't span the 2008 crisis. In the drawdown module this means every allocation survived, because the window contains no severe bear market at the start of retirement — the exact scenario decumulation fears most.
-- **Simple cost model** — a flat 0.1% per one-way trade, applied to turnover.
+- **Survivorship bias.** The universe is the current S&P 500, so it leaves out firms that were dropped or went bust. That makes the results read slightly better than reality.
+- **Sample length.** The backtest starts in 2015 (the value factor needs a 5-year warm-up), so it does not cover the 2008 crisis. In the drawdown module this means every allocation survived, because the window does not contain a severe bear market at the start of retirement, which is exactly the scenario decumulation is most worried about.
+- **Simple cost model.** A flat 0.1% per one-way trade, applied to turnover.
 
-**Next steps:** extend the return history back through 2000–2008 (or bootstrap synthetic sequences) so the drawdown test faces a real early-retirement bear market, and validate the homemade factors against Ken French's published factor return series.
+Next steps would be to extend the return history back through 2000 to 2008 (or bootstrap synthetic sequences) so the drawdown test faces a real early-retirement bear market, and to validate the homemade factors against Ken French's published factor return series.
 
 ## How to run
 
@@ -77,8 +79,6 @@ factor-backtester/
 
 ## Built with
 
-Python · pandas · NumPy · yfinance · matplotlib
+Python, pandas, NumPy, yfinance, matplotlib
 
----
-
-*Built as a personal project extending quantitative analysis from a Lloyds Wealth placement. Feedback welcome.*
+Built as a personal project extending some quantitative analysis from a Lloyds Wealth placement. Feedback welcome.
